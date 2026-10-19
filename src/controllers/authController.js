@@ -2,28 +2,15 @@ import User from "../models/User.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import AppError from "../utils/AppError.js";
 import generateVerificationToken from "../utils/verificationToken.js";
-import resend from "../config/email.js";
-import { createHash } from "node:crypto";
-import bcrypt from "bcrypt";
+import { sendVerificationEmail } from "../services/emailService.js";
 import {
-  generateAccessToken,
-  generateRefreshToken,
-  setRefreshTokenCookie,
+    generateAccessToken,
+    generateRefreshToken,
+    setRefreshTokenCookie,
 } from "../utils/generateTokens.js";
+import bcrypt from "bcrypt";
+import { createHash } from "node:crypto";
 import jwt from "jsonwebtoken";
-
-const escapeHtml = (value) =>
-  value.replace(/[&<>"']/g, (char) => {
-    const entities = {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-    };
-
-    return entities[char];
-  });
 
 // register
 export const register = asyncHandler(async (req, res) => {
@@ -81,34 +68,14 @@ export const register = asyncHandler(async (req, res) => {
     `/api/auth/verify-email?token=${token}`;
 
   try {
-    const { error } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
-      to: [normalizedEmail],
-      subject: "Verify your TaskFlow email",
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-          <h2>Welcome to TaskFlow, ${escapeHtml(normalizedName)}!</h2>
-          <p>Click the button below to verify your email address.</p>
-          <p>
-            <a href="${verificationUrl}"
-               style="display:inline-block;padding:12px 20px;
-                      background:#2563eb;color:#fff;
-                      text-decoration:none;border-radius:6px;">
-              Verify Email
-            </a>
-          </p>
-          <p>This link expires in 15 minutes.</p>
-          <p>If you did not create this account, you can ignore this email.</p>
-        </div>
-      `,
-    });
-
-    if (error) {
-      throw new Error("Resend could not send the email");
-    }
+    await sendVerificationEmail(
+      normalizedName,
+      normalizedEmail,
+      verificationUrl,
+    );
   } catch {
-    // Email send fail aana, incomplete account-ai remove pannuvom.
     await User.deleteOne({ _id: user._id });
+
     throw new AppError(
       "Could not send verification email. Please try again.",
       502,

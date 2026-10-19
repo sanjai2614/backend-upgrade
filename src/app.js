@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 
 import authRoutes from "./routes/authRoutes.js";
+import taskRoutes from "./routes/taskRoutes.js"
 import errorMiddleware from "./middleware/errorMidddleware.js";
 
 const app = express();
@@ -27,6 +28,9 @@ app.get("/", (req, res) => {
 
 // Auth routes
 app.use("/api/auth", authRoutes);
+
+// task routes
+app.use("/api/tasks", taskRoutes);
 
 // 404 handler
 app.use((req, res, next) => {
